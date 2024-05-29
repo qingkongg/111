@@ -36,10 +36,11 @@ struct cache * cache_create(struct cache_config config,struct cache * lower_leve
     current->tag_bits = config.address_bits - current->index_bits - current->offset_bits;
     current->lower_cache = lower_level;
     current->config = config;
-    current->tag_mask = ((1<<(current->tag_bits-1))-1+(1<<(current->tag_bits-1)))*(1<<(current->index_bits + current->offset_bits));
+    current->tag_mask = ((1 << current->tag_bits) - 1) << (current->index_bits + current->offset_bits);
     current->index_mask = ((1 << current->index_bits) - 1) << current->offset_bits;
-    current->offset_mask = (1 << current->offset_bits) - 1 ;
-    current->lines = (struct cache_line *)malloc(config.lines*sizeof(struct cache_line));
+    current->offset_mask = (1 << current->offset_bits) - 1;
+    current->lines = (struct cache_line *)malloc(config.lines * sizeof(struct cache_line));
+    
     if(current->lines == NULL){
         return NULL;
     }
