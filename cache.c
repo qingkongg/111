@@ -27,8 +27,6 @@ uint32_t log21(uint32_t num){
 }
 /* Create a cache simulator according to the config */
 struct cache * cache_create(struct cache_config config,struct cache * lower_level){
-    /*YOUR CODE HERE*/
-    printf("1");
     struct cache *current = (struct cache*)malloc(sizeof(struct cache));
     
     if(current == NULL){
@@ -65,7 +63,7 @@ void cache_destroy(struct cache* cache){
         cache_destroy(cache->lower_cache);
     for (uint32_t way = 0; way < cache->config.ways ; way++) {
         for (uint32_t set = 0; set < (cache->config.lines / cache->config.ways); set++) {
-            uint32_t index = way * (cache->config.lines / cache->config.ways) + set;
+            uint32_t index = set * cache->config.ways + way;
             struct cache_line *line = &cache->lines[index];
             // 如果行是有效的并且是脏的，则写回
             if (line->valid && line->dirty) {
@@ -130,17 +128,24 @@ bool cache_write_byte(struct cache * cache, uint32_t addr, uint8_t byte){
     uint32_t set = (addr & cache->index_mask) >> cache->offset_bits;
     uint32_t offset = addr & cache->offset_mask;
     for(uint32_t round = 0;round < cache->config.ways;round++){
-        uint32_t index = round * (cache->config.lines / cache->config.ways) + set;
+        uint32_t index = round * (uint32_t)((cache->config.lines / cache->config.ways)) + set;
         if(cache->lines[index].valid == false){
             cache->lines[index].tag = tag;
             cache->lines[index].data[offset] = byte;
             cache->lines[index].last_access = get_timestamp();
             cache->lines[index].valid = true;
+            if(cache->config.write_back)
+                cache->lines[index].dirty = true;
+            else
+                mem_store(&byte,addr,sizeof(byte));
             return false;
         }
         else if(cache->lines[index].valid && cache->lines[index].tag == tag){
             cache->lines[index].data[offset] = byte;
-            cache->lines[index].dirty = true;
+            if(cache->config.write_back)
+                cache->lines[index].dirty = true;
+            else
+                mem_store(&byte,addr,sizeof(byte));
             cache->lines[index].last_access = get_timestamp();
             return true;
         }
@@ -148,7 +153,7 @@ bool cache_write_byte(struct cache * cache, uint32_t addr, uint8_t byte){
    
     uint32_t evict = findline(cache,set);
     struct cache_line *line = &cache->lines[evict];
-    if(cache->lines[evict].dirty){
+    if(cache->config.write_back && cache->lines[evict].dirty){
         
         uint32_t addr1 = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
                 // 写回数据到下一级缓存或内存
@@ -160,6 +165,9 @@ bool cache_write_byte(struct cache * cache, uint32_t addr, uint8_t byte){
 
     // Update the specific byte
     line->data[offset] = byte;
+    if(cache->config.write_back == false){
+        mem_store(&byte,addr,sizeof(byte));
+    }
     line->tag = tag;
     line->valid = true;
     line->last_access = get_timestamp();

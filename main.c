@@ -88,7 +88,7 @@ int main(){
 
     log = fopen("./log","w");
 
-    dot_test(L1,1000);
+    dot_test(L1,64);
 
     // we will make sure to first destroy L1 and then L2
     cache_destroy(L1);
