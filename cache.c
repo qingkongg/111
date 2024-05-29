@@ -108,13 +108,13 @@ bool cache_write_byte(struct cache * cache, uint32_t addr, uint8_t byte){
         uint32_t index = round * (cache->config.lines / cache->config.ways) + set;
         if(cache->lines[index].valid == false){
             cache->lines[index].tag = tag;
-            memcpy(&(cache->lines[index].data), &byte, sizeof(uint8_t));
+            cache->lines[index].data[offset] = byte;
             cache->lines[index].last_access = get_timestamp();
             cache->lines[index].valid = true;
             return false;
         }
         else if(cache->lines[index].valid && cache->lines[index].tag == tag){
-            memcpy(&(cache->lines[index].data), &byte, sizeof(uint8_t));
+            cache->lines[index].data[offset] = byte;
             cache->lines[index].dirty = true;
             cache->lines[index].last_access = get_timestamp();
             return true;
@@ -122,17 +122,22 @@ bool cache_write_byte(struct cache * cache, uint32_t addr, uint8_t byte){
     }
    
     uint32_t evict = findline(cache,set);
+    struct cache_line *line = &cache->lines[evict];
     if(cache->lines[evict].dirty){
-        struct cache_line *line = &cache->lines[evict];
+        
         uint32_t addr = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
                 // 写回数据到下一级缓存或内存
         mem_store(line->data, addr, cache->config.line_size);       
         line->dirty = false;
     }
-    mem_load(cache->lines[evict].data,addr,sizeof(uint8_t));
-    cache->lines[evict].tag = tag;
-    cache->lines[evict].last_access = get_timestamp();
-    memcpy(&cache->lines[evict].data[offset], &byte, sizeof(byte));
+    uint32_t block_addr = addr & ~(cache->config.line_size - 1);
+    mem_load(line->data, block_addr, cache->config.line_size);
+
+    // Update the specific byte
+    line->data[offset] = byte;
+    line->tag = tag;
+    line->valid = true;
+    line->last_access = get_timestamp();
     return false;
 }
 
