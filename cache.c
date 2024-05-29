@@ -58,8 +58,6 @@ struct cache * cache_create(struct cache_config config,struct cache * lower_leve
 }
 
 void cache_destroy(struct cache* cache){
-    // if(cache->lower_cache)
-    //     cache_destroy(cache->lower_cache);
     for (uint32_t way = 0; way < cache->config.ways ; way++) {
         for (uint32_t set = 0; set < (cache->config.lines / cache->config.ways); set++) {
             uint32_t index = set * cache->config.ways + way;
