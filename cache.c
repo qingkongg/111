@@ -69,7 +69,7 @@ void cache_destroy(struct cache* cache){
                 // 计算地址
                 uint32_t addr = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
                 // 写回数据到下一级缓存或内存
-                mem_store(line->data, addr, cache->config.line_size*sizeof(uint8_t));
+                mem_store(line->data, addr, cache->config.line_size);
                 }
             // 释放行数据的内存
         }
@@ -152,11 +152,11 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
 
         uint32_t addr1 = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
         // 写回数据到下一级缓存或内存
-        mem_store(line->data, addr1, cache->config.line_size * sizeof(uint8_t));
+        mem_store(line->data, addr1, cache->config.line_size );
         line->dirty = false;
     }
     uint32_t block_addr = addr & ~(cache->config.line_size - 1);
-    mem_load(line->data, block_addr, cache->config.line_size * sizeof(uint8_t));
+    mem_load(line->data, block_addr, cache->config.line_size );
 
     // Update the specific byte
     line->data[offset] = byte;

@@ -71,7 +71,7 @@ int main(){
     .line_size = 4,
     .lines = 16,
     .size = 4*16,
-    .ways = 4,
+    .ways = 16,
     .write_back = true};
 
     // struct cache_config L2_config={
@@ -88,7 +88,7 @@ int main(){
 
     log = fopen("./log","w");
 
-    dot_test(L1,64);
+    dot_test(L1,1000);
 
     // we will make sure to first destroy L1 and then L2
     cache_destroy(L1);
