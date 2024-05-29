@@ -6,7 +6,7 @@
 
 uint32_t findline(struct cache * cache,uint32_t set){
     uint64_t time = cache->lines[set].last_access;
-    uint32_t line = 0;
+    uint32_t line = set;
     for(uint32_t round = 0;round < cache->config.ways;round++){
         uint32_t index =  round * (cache->config.lines / cache->config.ways) + set;
         if(cache->lines[index].last_access < time){
@@ -69,7 +69,7 @@ void cache_destroy(struct cache* cache){
                 // 计算地址
                 uint32_t addr = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
                 // 写回数据到下一级缓存或内存
-                mem_store(line->data, addr, cache->config.line_size);
+                mem_store(line->data, addr, cache->config.line_size*sizeof(uint8_t));
                 }
             // 释放行数据的内存
             free(line->data);
@@ -83,20 +83,42 @@ void cache_destroy(struct cache* cache){
 bool cache_read_byte(struct cache * cache, uint32_t addr, uint8_t *byte){
     uint32_t tag = (addr & cache->tag_mask) >> (cache->index_bits + cache->offset_bits);
     uint32_t set = (addr & cache->index_mask) >> cache->offset_bits;
+    uint32_t offset = addr & cache->offset_mask;
     for(uint32_t round = 0;round < cache->config.ways;round++){
         uint32_t index = round * (cache->config.lines / cache->config.ways) + set;
         if(cache->lines[index].valid){
             if(cache->lines[index].tag == tag){
                 cache->lines[index].last_access = get_timestamp();
+                *byte = cache->lines[index].data[offset];
+
                 return true;
             }
             //low_level did not exit or not find,find from memory
-
-        }
-   
+        }  
     }
     
-    cache_write_byte(cache,addr,*byte);
+    // Cache miss, find a line to replace
+    uint32_t evict = findline(cache, set);
+    struct cache_line *line = &cache->lines[evict];
+
+    // Write back if dirty
+    if(line->dirty){
+        uint32_t evict_addr = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
+        mem_store(line->data, evict_addr, cache->config.line_size);       
+        line->dirty = false;
+    }
+
+    // Load the entire line from memory
+    uint32_t block_addr = addr & ~(cache->config.line_size - 1);
+    mem_load(line->data, block_addr, cache->config.line_size);
+
+    // Update the cache line fields
+    line->tag = tag;
+    line->valid = true;
+    line->last_access = get_timestamp();
+
+    // Return the requested byte
+    *byte = line->data[offset];
     return false;
 }
 /* Write one byte into a specific address. return hit=true/miss=false*/
@@ -125,13 +147,13 @@ bool cache_write_byte(struct cache * cache, uint32_t addr, uint8_t byte){
     struct cache_line *line = &cache->lines[evict];
     if(cache->lines[evict].dirty){
         
-        uint32_t addr = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
+        uint32_t addr1 = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
                 // 写回数据到下一级缓存或内存
-        mem_store(line->data, addr, cache->config.line_size);       
+        mem_store(line->data, addr1, cache->config.line_size*sizeof(uint8_t));       
         line->dirty = false;
     }
     uint32_t block_addr = addr & ~(cache->config.line_size - 1);
-    mem_load(line->data, block_addr, cache->config.line_size);
+    mem_load(line->data, block_addr, cache->config.line_size*sizeof(uint8_t));
 
     // Update the specific byte
     line->data[offset] = byte;
