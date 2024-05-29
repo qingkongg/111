@@ -73,8 +73,11 @@ void cache_destroy(struct cache* cache){
                 mem_store(line->data, addr, cache->config.line_size*sizeof(uint8_t));
                 }
             // 释放行数据的内存
-            free(line->data);
         }
+    }
+    for (uint32_t i = 0; i < cache->config.lines; i++)
+    {
+        free(cache->lines[i].data);
     }
     free(cache->lines);
     free(cache);   
