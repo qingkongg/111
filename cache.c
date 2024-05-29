@@ -43,6 +43,9 @@ struct cache * cache_create(struct cache_config config,struct cache * lower_leve
     current->index_mask = ((1 << current->index_bits) - 1) << current->offset_bits;
     current->offset_mask = (1 << current->offset_bits) - 1 ;
     current->lines = (struct cache_line *)malloc(config.lines*sizeof(struct cache_line));
+    if(current->lines == NULL){
+        return NULL;
+    }
     for (uint32_t i = 0; i < config.lines; i++) {
         current->lines[i].valid = false;
         current->lines[i].dirty = false;
