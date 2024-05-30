@@ -72,7 +72,7 @@ int main(){
     .lines = 16,
     .size = 16 * 4,
     .ways = 4,
-    .write_back = false};
+    .write_back = true};
 
     // struct cache_config L2_config={
     // .address_bits = 32,

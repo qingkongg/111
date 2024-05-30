@@ -162,11 +162,11 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
 
         uint32_t addr1 = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
         // 写回数据到下一级缓存或内存
-        mem_store(line->data, addr1, cache->config.line_size );
+        mem_store(line->data, block_addr, cache->config.line_size);
         line->dirty = false;
     }
     // Update the specific byte
-    mem_load(line->data, addr, cache->config.line_size );
+    mem_load(line->data, block_addr, cache->config.line_size );
     line->data[offset] = byte;
     line->tag = tag;
     line->valid = true;
