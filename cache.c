@@ -130,6 +130,7 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
     for (uint32_t round = 0; round < cache->config.ways; round++) {
         uint32_t index = round * (uint32_t)((cache->config.lines / cache->config.ways)) + set;
         if (cache->lines[index].valid == false) {
+            mem_load(cache->lines[index].data,addr,cache->config.line_size);
             cache->lines[index].tag = tag;
             cache->lines[index].data[offset] = byte;
             cache->lines[index].last_access = get_timestamp();
@@ -146,6 +147,9 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
 
     uint32_t evict = findline(cache, set);
     struct cache_line* line = &cache->lines[evict];
+    uint8_t* copy =  (uint8_t *)malloc(cache->config.line_size * sizeof(uint8_t));
+    uint32_t block_addr = addr & ~(cache->config.line_size - 1);
+    mem_load(copy, block_addr, cache->config.line_size );
     if (cache->lines[evict].dirty) {
 
         uint32_t addr1 = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
@@ -153,11 +157,9 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
         mem_store(line->data, addr1, cache->config.line_size );
         line->dirty = false;
     }
-    uint32_t block_addr = addr & ~(cache->config.line_size - 1);
-    mem_load(line->data, block_addr, cache->config.line_size );
-
     // Update the specific byte
-    line->data[offset] = byte;
+    free(line->data);
+    line->data = copy;
     line->tag = tag;
     line->valid = true;
     line->last_access = get_timestamp();
