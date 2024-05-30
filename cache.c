@@ -127,6 +127,7 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
     uint32_t tag = (addr & cache->tag_mask) >> (cache->index_bits + cache->offset_bits);
     uint32_t set = (addr & cache->index_mask) >> cache->offset_bits;
     uint32_t offset = addr & cache->offset_mask;
+    uint32_t block_addr = addr & ~(cache->config.line_size - 1);
     for (uint32_t round = 0; round < cache->config.ways; round++) {
         uint32_t index = round * (uint32_t)((cache->config.lines / cache->config.ways)) + set;
         if (cache->lines[index].valid == false) {
@@ -137,20 +138,27 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
             cache->lines[index].valid = true;
             if(cache->config.write_back)
                 cache->lines[index].dirty = true;
+            else if(cache->config.write_back == false){
+                mem_store(cache->lines[index].data,block_addr,cache->config.line_size);
+            }
             return false;
         }
         else if (cache->lines[index].valid && cache->lines[index].tag == tag) {
             cache->lines[index].data[offset] = byte;
-            cache->lines[index].dirty = true;
+            
             cache->lines[index].last_access = get_timestamp();
+            if(cache->config.write_back)
+                cache->lines[index].dirty = true;
+            else if(cache->config.write_back == false)
+                mem_store(cache->lines[index].data,block_addr,cache->config.line_size);
             return true;
         }
     }
 
     uint32_t evict = findline(cache, set);
     struct cache_line* line = &cache->lines[evict];
-    //uint32_t block_addr = addr & ~(cache->config.line_size - 1);
-    if (cache->lines[evict].dirty) {
+
+    if (cache->lines[evict].dirty && cache->config.write_back) {
 
         uint32_t addr1 = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
         // 写回数据到下一级缓存或内存
@@ -167,7 +175,7 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
         line->dirty = true;
     }
     else{
-        mem_store(&byte,addr,1);
+        mem_store(line->data,block_addr,cache->config.line_size);
     }
     return false;
 }

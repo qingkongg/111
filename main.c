@@ -68,11 +68,11 @@ void dot_test(struct cache * L1, uint64_t N) {
 int main(){
     struct cache_config L1_config={
     .address_bits = 32,
-    .line_size = 1,
+    .line_size = 4,
     .lines = 16,
-    .size = 16 * 1,
+    .size = 16 * 4,
     .ways = 4,
-    .write_back = true};
+    .write_back = false};
 
     // struct cache_config L2_config={
     // .address_bits = 32,
