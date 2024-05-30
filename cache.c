@@ -131,7 +131,7 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
     for (uint32_t round = 0; round < cache->config.ways; round++) {
         uint32_t index = round * (uint32_t)((cache->config.lines / cache->config.ways)) + set;
         if (cache->lines[index].valid == false) {
-            mem_load(cache->lines[index].data,addr,cache->config.line_size);
+            mem_load(cache->lines[index].data,block_addr,cache->config.line_size);
             cache->lines[index].tag = tag;
             cache->lines[index].data[offset] = byte;
             cache->lines[index].last_access = get_timestamp();
@@ -162,7 +162,7 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
 
         uint32_t addr1 = (line->tag << (cache->index_bits + cache->offset_bits)) | (set << cache->offset_bits);
         // 写回数据到下一级缓存或内存
-        mem_store(line->data, block_addr, cache->config.line_size);
+        mem_store(line->data, addr1, cache->config.line_size);
         line->dirty = false;
     }
     // Update the specific byte
