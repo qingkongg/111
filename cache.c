@@ -135,6 +135,7 @@ bool cache_write_byte(struct cache* cache, uint32_t addr, uint8_t byte) {
             cache->lines[index].data[offset] = byte;
             cache->lines[index].last_access = get_timestamp();
             cache->lines[index].valid = true;
+            cache->lines[index].dirty = true;
             return false;
         }
         else if (cache->lines[index].valid && cache->lines[index].tag == tag) {
