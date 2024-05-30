@@ -61,7 +61,7 @@ struct cache * cache_create(struct cache_config config,struct cache * lower_leve
 void cache_destroy(struct cache* cache){
     for (uint32_t way = 0; way < cache->config.ways ; way++) {
         for (uint32_t set = 0; set < (cache->config.lines / cache->config.ways); set++) {
-            uint32_t index = set * cache->config.ways + way;
+            uint32_t index = way * (cache->config.lines / cache->config.ways) + set;
             struct cache_line *line = &cache->lines[index];
             // 如果行是有效的并且是脏的，则写回
             if (line->valid && line->dirty) {
